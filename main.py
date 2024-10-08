@@ -4,7 +4,7 @@ import csv
 import package
 import truck
 import HashTable
-#import getpass
+from datetime import datetime, timedelta
 
 #Create the packages table
 package_table = HashTable.ChainingHashTable()
@@ -22,7 +22,7 @@ truck1 = truck.truck(1,0,28800,"4001 South 700 East",[1,2,4,5,13,14,15,16,19,20,
 truck2 = truck.truck(2,0,32700,"4001 South 700 East",[3,6,7,8,10,11,18,25,28,32,36,38])
 truck3 = truck.truck(3,0,0,"4001 South 700 East",[9,12,17,21,22,23,24,26,27,33,35,39])
 
-truck_list = [truck2]
+truck_list = [truck1,truck2]
 
 #--------------------------------------------------------------------------------------------------------------------
 
@@ -101,6 +101,29 @@ def truck_find_distance(truck,package_id_next):
         #print(distance_data[lookup_x][lookup_y])
         return float(distance_data[lookup_x][lookup_y])
 
+def truck_return(truck,hub_address):
+
+    #Initialize variables for addresses of the parameter package IDs
+    address1 = truck.current_address
+    address2 = hub_address
+
+    # Below comment would check to see if any package addresses are empty
+    # if package_table.search(package_id_current).address != '' and package_table.search(package_id_next).address != '':
+    for address in address_data:
+        #Get the values from addresses.csv 2D list, that correpsonds to the address parameter
+        if address[2] == address1:
+            lookup_x = int(address[0])
+        if address[2] == address2:
+            lookup_y = int(address[0])
+    
+    #Uses the lookup x and y values from addresses to find the distance between them in the the distances.csv file 2D array
+    if distance_data[lookup_x][lookup_y] == '':
+        #print(distance_data[lookup_y][lookup_x])
+        return float(distance_data[lookup_y][lookup_x])
+    else:
+        #print(distance_data[lookup_x][lookup_y])
+        return float(distance_data[lookup_x][lookup_y])
+
 def lookup_package_info(package_id):
     p = package_table.search(package_id)
     if p == None:
@@ -129,21 +152,42 @@ def get_truck_miles(time): #TODO - FIX
 
 def the_algo(trucks):
     for truck in trucks:
+        #truck.miles_traveled = 0
         sorted_list = []
         shortest_distance = 8000
         shortest_package = None
         
+        #Set status of all packages in the truck to En route.
+        for package in truck.package_list:
+            package_table.search(package).status = "En route"
+
         while len(truck.package_list) > 0:
             for package in truck.package_list:
                 if truck_find_distance(truck,package) < shortest_distance:
                     shortest_distance = truck_find_distance(truck,package)
                     shortest_package = package
+            
+            #Remove the next package to be delivered (is the closest) from the original list
+            #Add the next package to the sorted-list that will be the delivery route
+            #Update the truck's location to the next package
             truck.package_list.remove(shortest_package)
             sorted_list.append(shortest_package)
+            truck.current_address = package_table.search(shortest_package).address
+            package_table.search(shortest_package).status = "Delivered"
+
+            #Adds the next package's distance to the truck's miles
+            truck.miles_traveled += shortest_distance
+
+            #TODO - add time miles code
+            #Package delivery time = base time + truck total driving time at the time
+
             shortest_distance = 8000
-            print(truck.package_list)
+        
+        #Truck returns to the hub. Set the truck's address to the hub.
+        truck.miles_traveled += truck_return(truck,"4001 South 700 East")
+        truck.current_address = "4001 South 700 East"
             
-        print(sorted_list)    
+        print("List:",sorted_list)    
         #truck.package_list = sorted_list
                 
             
@@ -156,9 +200,9 @@ class Main:
     print("WGUPS Delivery System")
     while running:
         print("\nSelect an option (type in the number to proceed):\n")
-        print("1. tester                    4. def find distance")
-        print("2. distance data             5. TBD")
-        print("3. Lookup package info       6. Exit\n")
+        print("1. Deliver packages              4. def find distance")
+        print("2. distance data                 5. View total truck driving miles")
+        print("3. Lookup package info           6. Exit\n")
 
         choice = str(input())
 
@@ -175,7 +219,7 @@ class Main:
             case "4":
                 print(find_distance(1,15))
             case "5":
-                print(type(truck1.package_list))
+                get_truck_miles(0)
             case "6":
                 print("Exiting...")
                 running = False
