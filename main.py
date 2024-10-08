@@ -22,7 +22,7 @@ truck1 = truck.truck(1,0,28800,"4001 South 700 East",[1,2,4,5,13,14,15,16,19,20,
 truck2 = truck.truck(2,0,32700,"4001 South 700 East",[3,6,7,8,10,11,18,25,28,32,36,38])
 truck3 = truck.truck(3,0,0,"4001 South 700 East",[9,12,17,21,22,23,24,26,27,33,35,39])
 
-truck_list = [truck1,truck2]
+truck_list = [truck2]
 
 #--------------------------------------------------------------------------------------------------------------------
 
@@ -78,6 +78,29 @@ def find_distance(package_id_current,package_id_next):
         #print(distance_data[lookup_x][lookup_y])
         return distance_data[lookup_x][lookup_y]
 
+def truck_find_distance(truck,package_id_next):
+
+    #Initialize variables for addresses of the parameter package IDs
+    address1 = truck.current_address
+    address2 = package_table.search(package_id_next).address
+
+    # Below comment would check to see if any package addresses are empty
+    # if package_table.search(package_id_current).address != '' and package_table.search(package_id_next).address != '':
+    for address in address_data:
+        #Get the values from addresses.csv 2D list, that correpsonds to the address parameter
+        if address[2] == address1:
+            lookup_x = int(address[0])
+        if address[2] == address2:
+            lookup_y = int(address[0])
+    
+    #Uses the lookup x and y values from addresses to find the distance between them in the the distances.csv file 2D array
+    if distance_data[lookup_x][lookup_y] == '':
+        #print(distance_data[lookup_y][lookup_x])
+        return float(distance_data[lookup_y][lookup_x])
+    else:
+        #print(distance_data[lookup_x][lookup_y])
+        return float(distance_data[lookup_x][lookup_y])
+
 def lookup_package_info(package_id):
     p = package_table.search(package_id)
     if p == None:
@@ -105,14 +128,25 @@ def get_truck_miles(time): #TODO - FIX
     print("Total  :",truck1.miles_traveled+truck2.miles_traveled+truck3.miles_traveled,"miles")
 
 def the_algo(trucks):
-    print("TODO")
     for truck in trucks:
         sorted_list = []
-        next_distance = 8000
-        for package in truck.package_list: #package is the ID
-            if find_distance(package,next(package)) < next_distance:
-                next_distance = next(package)
-            truck.package_list.remove(package)
+        shortest_distance = 8000
+        shortest_package = None
+        
+        while len(truck.package_list) > 0:
+            for package in truck.package_list:
+                if truck_find_distance(truck,package) < shortest_distance:
+                    shortest_distance = truck_find_distance(truck,package)
+                    shortest_package = package
+            truck.package_list.remove(shortest_package)
+            sorted_list.append(shortest_package)
+            shortest_distance = 8000
+            print(truck.package_list)
+            
+        print(sorted_list)    
+        #truck.package_list = sorted_list
+                
+            
 
 
     
@@ -140,6 +174,8 @@ class Main:
                 lookup_package_info(lookup_id)
             case "4":
                 print(find_distance(1,15))
+            case "5":
+                print(type(truck1.package_list))
             case "6":
                 print("Exiting...")
                 running = False
