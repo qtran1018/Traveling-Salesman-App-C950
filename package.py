@@ -9,4 +9,5 @@ class package:
         self.weight = weight
         self.status = status
         self.notes = notes
+        self.departure_time = None
         self.delivery_time = None
