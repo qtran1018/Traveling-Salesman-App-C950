@@ -1,50 +1,45 @@
- # HashTable class using chaining.
-class ChainingHashTable:
+#Referenced from WGU C950 supplemental resources, C950 - Webinar-1 - Let’s Go Hashing
+class hashtable:
     # Constructor with optional initial capacity parameter.
     # Assigns all buckets with an empty list.
-    def __init__(self, initial_capacity=40):
+    def __init__(self, size=40):
         # initialize the hash table with empty bucket list entries.
         self.table = []
-        for i in range(initial_capacity):
+        for i in range(size):
             self.table.append([])
     
-    def insert(self, key, item): #  does both insert and update 
-    # get the bucket list where this item will go.
+    #Insert the key-item if it doesn't exist already, updates if it does.
+    def insert(self, key, item):
         bucket = hash(key) % len(self.table)
         bucket_list = self.table[bucket]
 
-        # update key if it is already in the bucket
+        #Updates if already exists
         for kv in bucket_list:
-            #print (key_value)
             if kv[0] == key:
                 kv[1] = item
             return True
         
-        # if not, insert the item to the end of the bucket list.
+        #Inserts if new
         key_value = [key, item]
         bucket_list.append(key_value)
         return True
 
+    #Takes in key (package ID for this project) and searches the buckets for the matching
     def search(self, key):
-        # get the bucket list where this key would be.
         bucket = hash(key) % len(self.table)
         bucket_list = self.table[bucket]
-        #print(bucket_list)
 
-        # search for the key in the bucket list
+        #Searches for the key-value item
         for kv in bucket_list:
-            #print (key_value)
             if kv[0] == key:
-                return kv[1] # value
+                return kv[1]
         return None
     
+    #Removes the key-item from the hash table bucket
     def remove(self, key):
-        # get the bucket list where this item will be removed from.
         bucket = hash(key) % len(self.table)
         bucket_list = self.table[bucket]
 
-        # remove the item from the bucket list if it is present.
         for kv in bucket_list:
-            #print (key_value)
             if kv[0] == key:
                 bucket_list.remove([kv[0],kv[1]])
