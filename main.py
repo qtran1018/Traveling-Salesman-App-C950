@@ -18,9 +18,9 @@ with open('addresses.csv',encoding='utf-8-sig') as address_file:
     address_data = list(csv.reader(address_file))
 
 #Time set in seconds from 00:00, assuminng delivery time won't last 24 hours or more.
-truck1 = truck.truck(1,0,28800,"4001 South 700 East",[1,2,4,5,13,14,15,16,19,20,29,30,31,35,37,40])
-truck2 = truck.truck(2,0,32700,"4001 South 700 East",[3,6,7,8,10,11,18,25,28,32,36,38])
-truck3 = truck.truck(3,0,0,"4001 South 700 East",[9,12,17,21,22,23,24,26,27,33,35,39])
+truck1 = truck.truck(1,0,datetime.strptime('08:00', '%H:%M'),"4001 South 700 East",[1,2,4,5,13,14,15,16,19,20,29,30,31,35,37,40])
+truck2 = truck.truck(2,0,datetime.strptime('09:05', '%H:%M'),"4001 South 700 East",[3,6,7,8,10,11,18,25,28,32,36,38])
+truck3 = truck.truck(3,0,None,"4001 South 700 East",[9,12,17,21,22,23,24,26,27,33,35,39])
 
 truck_list = [truck1,truck2]
 
@@ -145,14 +145,57 @@ def timed_package_lookup(time): #TODO - MAKE
     print("TODO")
 
 def get_truck_miles(time): #TODO - FIX
-    print("Truck 1:",truck1.miles_traveled,"miles")
-    print("Truck 2:",truck2.miles_traveled,"miles")
-    print("Truck 3:",truck3.miles_traveled,"miles")
-    print("Total  :",truck1.miles_traveled+truck2.miles_traveled+truck3.miles_traveled,"miles")
+    print("Truck 1:",round(truck1.miles_traveled,2),"miles")
+    print("Truck 2:",round(truck2.miles_traveled,2),"miles")
+    print("Truck 3:",round(truck3.miles_traveled,2),"miles")
+    print("Total  :",round(truck1.miles_traveled+truck2.miles_traveled+truck3.miles_traveled,2),"miles")
 
-def the_algo(trucks):
+def increment_time(base_time, total_truck_time):
+    return base_time + timedelta(minutes=total_truck_time)
+
+def deliver_packages(truck):
+    truck.miles_traveled = 0
+    sorted_list = []
+    shortest_distance = 8000
+    shortest_package = None
+    #Set status of all packages in the truck to En route.
+    for package in truck.package_list:
+        package_table.search(package).status = "En route"
+
+    while len(truck.package_list) > 0:
+        for package in truck.package_list:
+            if truck_find_distance(truck,package) < shortest_distance:
+                shortest_distance = truck_find_distance(truck,package)
+                shortest_package = package
+        
+        #Remove the next package to be delivered (is the closest) from the original list
+        #Add the next package to the sorted-list that will be the delivery route
+        #Update the truck's location to the next package
+        truck.package_list.remove(shortest_package)
+        sorted_list.append(shortest_package)
+        truck.current_address = package_table.search(shortest_package).address
+        package_table.search(shortest_package).status = "Delivered"
+
+        #Adds the next package's distance to the truck's miles
+        truck.miles_traveled += shortest_distance
+
+        #TODO - add time miles code
+        #Package delivery time = base time + truck total driving time at the time
+        package_table.search(shortest_package).delivery_time = increment_time(truck.departure_time,(60*truck.miles_traveled)/18).time()
+
+        shortest_distance = 8000
+    
+    #Truck returns to the hub. Set the truck's address to the hub.
+    truck.miles_traveled += truck_return(truck,"4001 South 700 East")
+    truck.current_address = "4001 South 700 East"
+    truck.return_time = increment_time(truck.departure_time,(60*truck.miles_traveled)/18)
+        
+    #print("List:",sorted_list)
+    truck.package_list = sorted_list
+
+""" def the_algo(trucks):
     for truck in trucks:
-        #truck.miles_traveled = 0
+        truck.miles_traveled = 0
         sorted_list = []
         shortest_distance = 8000
         shortest_package = None
@@ -180,6 +223,7 @@ def the_algo(trucks):
 
             #TODO - add time miles code
             #Package delivery time = base time + truck total driving time at the time
+            package_table.search(shortest_package).delivery_time = increment_time(truck.departure_time,(60*truck.miles_traveled)/18).time()
 
             shortest_distance = 8000
         
@@ -187,12 +231,8 @@ def the_algo(trucks):
         truck.miles_traveled += truck_return(truck,"4001 South 700 East")
         truck.current_address = "4001 South 700 East"
             
-        print("List:",sorted_list)    
-        #truck.package_list = sorted_list
-                
-            
-
-
+        print("List:",sorted_list)
+        truck.package_list = sorted_list    """
     
 class Main:
     load_package_info()
@@ -208,16 +248,48 @@ class Main:
 
         match choice:
             case "1":
-                the_algo(truck_list)
+                #the_algo(truck_list)
+                for delivery_truck in truck_list:
+                    deliver_packages(delivery_truck)
+                if truck1.current_address == "4001 South 700 East" and truck2.current_address == "4001 South 700 East":
+                    if (truck1.return_time < truck2.return_time) and (truck1.return_time > datetime.strptime('10:20', '%H:%M')):
+                        truck3.departure_time = truck1.return_time
+                        package_table.search(9).address = "410 S State St"
+                        package_table.search(9).city = "Salt Lake City"
+                        package_table.search(9).state = "UT"
+                        package_table.search(9).zip = "84111"
+                        deliver_packages(truck3)
+                    if (truck1.return_time < truck2.return_time) and (truck1.return_time < datetime.strptime('10:20', '%H:%M')):
+                        truck3.departure_time = datetime.strptime('10:20', '%H:%M')
+                        package_table.search(9).address = "410 S State St"
+                        package_table.search(9).city = "Salt Lake City"
+                        package_table.search(9).state = "UT"
+                        package_table.search(9).zip = "84111"
+                        deliver_packages(truck3)
+                    if (truck2.return_time < truck1.return_time) and (truck2.return_time > datetime.strptime('10:20', '%H:%M')):
+                        truck3.departure_time = truck2.return_time
+                        package_table.search(9).address = "410 S State St"
+                        package_table.search(9).city = "Salt Lake City"
+                        package_table.search(9).state = "UT"
+                        package_table.search(9).zip = "84111"
+                        deliver_packages(truck3)                     
+                    else: 
+                        truck3.departure_time = datetime.strptime('10:20', '%H:%M')
+                        package_table.search(9).address = "410 S State St"
+                        package_table.search(9).city = "Salt Lake City"
+                        package_table.search(9).state = "UT"
+                        package_table.search(9).zip = "84111"
+                        deliver_packages(truck3)
             case "2":
-                print(distance_data)          
+                print(truck1.package_list)
+                print(truck2.package_list)         
             case "3":
                 #MAYBE add in an exit condition so you can stay in case 3 if input is invalid
                 print("\nType in a Package ID...")
                 lookup_id = int(input())
                 lookup_package_info(lookup_id)
             case "4":
-                print(find_distance(1,15))
+                print(find_distance(40,1))
             case "5":
                 get_truck_miles(0)
             case "6":

@@ -5,6 +5,7 @@ class truck:
         self.departure_time = departure_time
         self.current_address = current_address
         self.package_list = package_list
+        self.return_time = None
 
     #TODO - maybe don't need a setter, change the var directly.
     def set_departure_time(self, value):
