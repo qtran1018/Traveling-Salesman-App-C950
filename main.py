@@ -18,8 +18,8 @@ with open('addresses.csv',encoding='utf-8-sig') as address_file:
 package_table = hashtable()
 
 #Create truck objects with pre-selected packages
-truck1 = truck.truck(1,0,datetime.strptime('08:00', '%H:%M'),"4001 South 700 East",[1,2,4,5,13,14,15,16,19,20,29,30,31,34,37,40])
-truck2 = truck.truck(2,0,datetime.strptime('09:05', '%H:%M'),"4001 South 700 East",[3,6,7,8,10,11,18,25,28,32,36,38])
+truck1 = truck.truck(1,0,datetime.strptime('08:00:00', '%H:%M:%S'),"4001 South 700 East",[1,2,4,5,13,14,15,16,19,20,29,30,31,34,37,40])
+truck2 = truck.truck(2,0,datetime.strptime('09:05:00', '%H:%M:%S'),"4001 South 700 East",[3,6,7,8,10,11,18,25,28,32,36,38])
 truck3 = truck.truck(3,0,None,"4001 South 700 East",[9,12,17,21,22,23,24,26,27,33,35,39])
 
 #Create the list of trucks. Excludes truck 3 due to only having 2 drivers.
@@ -180,7 +180,9 @@ def lookup_package_info(package_id):
         print("ZIP Code:",p.zip)
         print("Weight:",p.weight)
         print("Status:",p.status)
-        print("Departure time:",p.departure_time.time())
+
+        if p.status is not "At the hub":
+            print("Departure time:",p.departure_time.time())
 
         if p.status == "Delivered":
             print("Delivered at:",p.delivery_time.time())
@@ -188,6 +190,7 @@ def lookup_package_info(package_id):
 #Prints status of all packages on all trucks and their delivery times.
 def timed_package_lookup(time):
     checked_time = datetime.strptime(time,'%H:%M')
+    truck_miles = 0
     #Deliver packages
     deliver_trucks()
 
@@ -208,6 +211,7 @@ def timed_package_lookup(time):
             if (checked_time >= truck.departure_time) and (checked_time < p.delivery_time):
                 p.status = "En route"
                 p.delivery_time = None
+
             print("\nPackage ID:", p.id)
             print("Package status:",p.status)
             
@@ -216,9 +220,23 @@ def timed_package_lookup(time):
                 print("Package delivery time: None")
             else:
                 print("Package delivery time:",p.delivery_time.time())
+
+        #Get truck miles driven caluclated at the checked time.
+        if checked_time >= truck.departure_time:
+            time_difference = checked_time - truck.departure_time
+            driven_time = time_difference.total_seconds()
+            truck_miles =.005 * driven_time
+
+        #Compares the truck miles calculated to the actualy truck miles driven(limit) and prints whichever is lower.
+        if truck_miles < truck.miles_traveled:
+            print("")
+            print("Truck",truck.truck_number,"miles traveled:",round(truck_miles,2))
+        else:
+            print("")
+            print("Truck",truck.truck_number,"miles traveled:",round(truck.miles_traveled,2))
                   
 #Displays total truck miles traveled at the current moment (before or after deliveries are made)
-def get_truck_miles(time):
+def get_truck_miles():
     if truck1.miles_traveled == 0 and truck2.miles_traveled == 0 and truck3.miles_traveled == 0:
         print("\nTruck miles before deliveries. To see truck miles after deliveries, first use Option 1 at the main menu and try again.\n")
         print("Truck 1:",round(truck1.miles_traveled,2),"miles")
@@ -289,6 +307,7 @@ def deliver_trucks():
         deliver_packages(delivery_truck)
     #When truck 1 and truck 2 return to hub, set truck 3's departure time, update package #9 address, and deliver
     if truck1.current_address == "4001 South 700 East" and truck2.current_address == "4001 South 700 East":
+        #Truck 1 returns before truck 2 and it's AFTER 10:20. Set truck 3 to leave when truck 1 returns.
         if (truck1.return_time < truck2.return_time) and (truck1.return_time > datetime.strptime('10:20', '%H:%M')):
             truck3.departure_time = truck1.return_time
             package_table.search(9).address = "410 S State St"
@@ -296,6 +315,7 @@ def deliver_trucks():
             package_table.search(9).state = "UT"
             package_table.search(9).zip = "84111"
             deliver_packages(truck3)
+        #Truck 1 returns before truck 2 and it's BEFORE 10:20. Set truck 3 to leave at 10:20 after updating package 9 data.
         if (truck1.return_time < truck2.return_time) and (truck1.return_time < datetime.strptime('10:20', '%H:%M')):
             truck3.departure_time = datetime.strptime('10:20', '%H:%M')
             package_table.search(9).address = "410 S State St"
@@ -303,13 +323,15 @@ def deliver_trucks():
             package_table.search(9).state = "UT"
             package_table.search(9).zip = "84111"
             deliver_packages(truck3)
+        #Truck 2 returns before truck 1 and it's AFTER 10:20. Set truck 3 to leave when truck 2 returns.    
         if (truck2.return_time < truck1.return_time) and (truck2.return_time > datetime.strptime('10:20', '%H:%M')):
             truck3.departure_time = truck2.return_time
             package_table.search(9).address = "410 S State St"
             package_table.search(9).city = "Salt Lake City"
             package_table.search(9).state = "UT"
             package_table.search(9).zip = "84111"
-            deliver_packages(truck3)                     
+            deliver_packages(truck3)
+        #Truck 2 returns before truck 1 and it's BEFORE 10:20. Set truck 3 to leave at 10:20 after updating package 9 data.                     
         else: 
             truck3.departure_time = datetime.strptime('10:20', '%H:%M')
             package_table.search(9).address = "410 S State St"
@@ -326,9 +348,10 @@ class Main:
     while running:
         print("\nMAIN MENU")
         print("Select an option (type in the number to proceed):\n")
-        print("1. Deliver packages              4. def find distance")
-        print("2. Timed package lookup          5. View total truck driving miles")
-        print("3. Package lookup (ID)           6. Exit\n")
+        print("1. Deliver packages              4. View total truck driving miles")
+        print("2. Package lookup (Time)         5. Exit")
+        print("3. Package lookup (ID)           6. Get all packages with deadlines (for project verification)")
+        print("                                    (Deliver packages with option 1 first.)\n")
 
         choice = str(input())
 
@@ -350,12 +373,25 @@ class Main:
                 except ValueError:
                     print("\nError: invalid input. Type in an integer for the package ID.")
             case "4":
-                pass
+                get_truck_miles()
             case "5":
-                get_truck_miles(0)
-            case "6":
                 print("Exiting...")
                 running = False
                 raise SystemExit
+            case "6":
+                lookup_package_info(15)
+                lookup_package_info(6)
+                lookup_package_info(25)
+                lookup_package_info(20)
+                lookup_package_info(16)
+                lookup_package_info(14)
+                lookup_package_info(1)
+                lookup_package_info(13)
+                lookup_package_info(29)
+                lookup_package_info(30)
+                lookup_package_info(31)
+                lookup_package_info(34)
+                lookup_package_info(37)
+                lookup_package_info(40)
             case _:
                 print("Please type a valid option.\n")
