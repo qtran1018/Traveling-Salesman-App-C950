@@ -181,7 +181,7 @@ def lookup_package_info(package_id):
         print("Weight:",p.weight)
         print("Status:",p.status)
 
-        if p.status is not "At the hub":
+        if p.status != "At the hub":
             print("Departure time:",p.departure_time.time())
 
         if p.status == "Delivered":
@@ -191,6 +191,7 @@ def lookup_package_info(package_id):
 def timed_package_lookup(time):
     checked_time = datetime.strptime(time,'%H:%M')
     truck_miles = 0
+    #total_truck_miles = 0
     #Deliver packages
     deliver_trucks()
 
@@ -212,7 +213,9 @@ def timed_package_lookup(time):
                 p.status = "En route"
                 p.delivery_time = None
 
-            print("\nPackage ID:", p.id)
+            print("\nPackage ID:",p.id)
+            print("Package Address:",p.address,p.city,p.state,p.zip)
+            print("Package deadline:",p.deadline)
             print("Package status:",p.status)
             
             #Catches instances where there is no delivery time yet for some packages.
@@ -220,6 +223,8 @@ def timed_package_lookup(time):
                 print("Package delivery time: None")
             else:
                 print("Package delivery time:",p.delivery_time.time())
+            
+            print("Truck#: ",truck.truck_number)
 
         #Get truck miles driven caluclated at the checked time.
         if checked_time >= truck.departure_time:
@@ -231,9 +236,13 @@ def timed_package_lookup(time):
         if truck_miles < truck.miles_traveled:
             print("")
             print("Truck",truck.truck_number,"miles traveled:",round(truck_miles,2))
+            #total_truck_miles += truck_miles
         else:
             print("")
             print("Truck",truck.truck_number,"miles traveled:",round(truck.miles_traveled,2))
+            #total_truck_miles += truck.miles_traveled
+        #print("\n------------------------------------------------------------------------------")
+        #print("\nTotal truck miles:",total_truck_miles)
                   
 #Displays total truck miles traveled at the current moment (before or after deliveries are made)
 def get_truck_miles():
@@ -349,9 +358,9 @@ class Main:
         print("\nMAIN MENU")
         print("Select an option (type in the number to proceed):\n")
         print("1. Deliver packages              4. View total truck driving miles")
-        print("2. Package lookup (Time)         5. Exit")
-        print("3. Package lookup (ID)           6. Get all packages with deadlines (for project verification)")
-        print("                                    (Deliver packages with option 1 first.)\n")
+        print("2. Package lookup (All,time)     5. Exit")
+        print("3. Package lookup (single,ID)\n")    #6. Get all packages with deadlines (for project verification)")
+        #print("                                    (Deliver packages with option 1 first.)\n")
 
         choice = str(input())
 
